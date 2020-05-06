@@ -44,16 +44,24 @@ python ./data/preprocess.py ./data/test.txt.tmp $BERT_MODEL $MAX_LENGTH > ./data
 Setup list of labels:
 
 ```sh
-cat ./data/train.txt ./data/dev.txt ./data/test.txt | cut -d " " -f 2 | grep -v "^$"| sort | uniq > labels.txt
+cat ./data/train.txt ./data/dev.txt ./data/test.txt | cut -d " " -f 2 | grep -v "^$"| sort | uniq > ./data/labels.txt
+```
+
+Create directory `model`:
+
+```sh
+mkdir model
 ```
 
 ## Run training
 
 ```sh
-python main.go
+python main.py
 ```
 
-## Tensorboard - see training results on graphs
+## Tensorboard
+
+See results of training on graphs:
 
 ```sh
 tensorboard --logdir lightning_logs

@@ -5,5 +5,4 @@ venv
 .ipynb_checkpoints
 
 cache
-*-model
 *_logs

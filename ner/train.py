@@ -14,7 +14,7 @@ def train():
     args.model_name_or_path = 'bert-base-multilingual-cased'
     args.config_name = 'bert-base-multilingual-cased'
     args.tokenizer_name = 'bert-base-multilingual-cased'
-    args.output_dir = './germeval-model'
+    args.output_dir = './model'
     args.cache_dir = './cache'
 
     args.max_seq_length = 32
