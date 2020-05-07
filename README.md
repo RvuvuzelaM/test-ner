@@ -4,6 +4,10 @@
 
 This test is based on example from [Transformers](https://github.com/huggingface/transformers/tree/master/examples/ner) library owned and maintained by [HuggingFace](https://huggingface.co/).
 
+## Prerequisites
+
+Working `Nvidia GPU` and [`CUDA`](https://developer.nvidia.com/cuda-downloads) installed.
+
 ## Setup
 
 Download all Python3 dependencies:
