@@ -17,7 +17,7 @@ def train():
     args.output_dir = './model'
     args.cache_dir = './cache'
 
-    args.max_seq_length = 32
+    args.max_seq_length = 64
     args.num_train_epochs = 3
     args.train_batch_size = 16
     args.eval_batch_size = 16
