@@ -123,20 +123,6 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
         segment_ids += [pad_token_segment_id] * padding_length
         label_ids += [pad_token_label_id] * padding_length
 
-        assert len(input_ids) == max_seq_length
-        assert len(input_mask) == max_seq_length
-        assert len(segment_ids) == max_seq_length
-        assert len(label_ids) == max_seq_length
-
-        if ex_index < 5:
-            logger.info("*** Example ***")
-            logger.info("guid: %s", example.guid)
-            logger.info("tokens: %s", " ".join([str(x) for x in tokens]))
-            logger.info("input_ids: %s", " ".join([str(x) for x in input_ids]))
-            logger.info("input_mask: %s", " ".join([str(x) for x in input_mask]))
-            logger.info("segment_ids: %s", " ".join([str(x) for x in segment_ids]))
-            logger.info("label_ids: %s", " ".join([str(x) for x in label_ids]))
-
         if "token_type_ids" not in tokenizer.model_input_names:
             segment_ids = None
 
@@ -146,6 +132,80 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
             )
         )
     return features
+    
+
+def read_eval_features(data_dir, file_name, max_seq_length, tokenizer, cls_token="[CLS]",
+                   cls_token_segment_id=1, sep_token="[SEP]", pad_token=0, pad_token_segment_id=0, 
+                   sequence_a_segment_id=0, mask_padding_with_zero=True):
+    file_path = os.path.join(data_dir, f"{file_name}.txt")
+    guid_index = 1
+    examples = []
+
+    with open(file_path, encoding="utf-8") as f:
+        words = []
+        for line in f:
+            if line.startswith("-DOCSTART-") or line == "" or line == "\n":
+                if words:
+                    examples.append(InputExample(guid=f"eval-{guid_index}", words=words))
+                    guid_index += 1
+                    words = []
+                else:
+                    splits = line.split(" ")
+                    words.append(splits[0])
+        if words:
+            examples.append(InputExample(guid=f"{mode}-{guid_index}", words=words))
+    
+    features = []
+    for (ex_index, example) in enumerate(examples):
+        if ex_index % 10_000 == 0:
+            logger.info("Writing example %d of %d", ex_index, len(examples))
+
+        tokens = []
+        for word in example.words:
+            word_tokens = tokenizer.tokenize(word)
+
+            # bert-base-multilingual-cased sometimes output "nothing ([]) when calling tokenize with just a space.
+            if len(word_tokens) > 0:
+                tokens.extend(word_tokens)
+        
+        special_tokens_count = 2
+        if len(tokens) > max_seq_length - special_tokens_count:
+            tokens = tokens[: (max_seq_length - special_tokens_count)]
+
+        tokens += [sep_token]
+        segment_ids = [sequence_a_segment_id] * len(tokens)
+
+        tokens = [cls_token] + tokens
+        segment_ids = [cls_token_segment_id] + segment_ids
+
+        input_ids = tokenizer.convert_tokens_to_ids(tokens)
+
+        # The mask has 1 for real tokens and 0 for padding tokens. Only real
+        # tokens are attended to.
+        input_mask = [1 if mask_padding_with_zero else 0] * len(input_ids)
+
+        # Zero-pad up to the sequence length.
+        padding_length = max_seq_length - len(input_ids)
+
+        input_ids += [pad_token] * padding_length
+        input_mask += [0 if mask_padding_with_zero else 1] * padding_length
+        segment_ids += [pad_token_segment_id] * padding_length
+
+        assert len(input_ids) == max_seq_length
+        assert len(input_mask) == max_seq_length
+        assert len(segment_ids) == max_seq_length
+
+        if "token_type_ids" not in tokenizer.model_input_names:
+            segment_ids = None
+
+        features.append(
+            InputFeatures(
+                input_ids=input_ids, attention_mask=input_mask, token_type_ids=segment_ids
+            )
+        )
+
+    return features
+
 
 
 def get_labels(path):
