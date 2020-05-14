@@ -1,9 +1,7 @@
 import logging
 import os
-
 from dataclasses import dataclass
-from typing import List, Optional, Union
-
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -42,14 +40,18 @@ def read_examples_from_file(data_dir, mode):
     file_path = os.path.join(data_dir, f"{mode}.txt")
     guid_index = 1
     examples = []
-    
+
     with open(file_path, encoding="utf-8") as f:
         words = []
         labels = []
         for line in f:
             if line.startswith("-DOCSTART-") or line == "" or line == "\n":
                 if words:
-                    examples.append(InputExample(guid=f"{mode}-{guid_index}", words=words, labels=labels))
+                    examples.append(
+                        InputExample(
+                            guid=f"{mode}-{guid_index}", words=words, labels=labels
+                        )
+                    )
                     guid_index += 1
                     words = []
                     labels = []
@@ -62,15 +64,28 @@ def read_examples_from_file(data_dir, mode):
                     # Examples could have no label for mode = "test"
                     labels.append("O")
         if words:
-            examples.append(InputExample(guid=f"{mode}-{guid_index}", words=words, labels=labels))
-            
+            examples.append(
+                InputExample(guid=f"{mode}-{guid_index}", words=words, labels=labels)
+            )
+
     return examples
 
 
-def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer, cls_token="[CLS]",
-                                 cls_token_segment_id=1, sep_token="[SEP]", pad_token=0, pad_token_segment_id=0, 
-                                 pad_token_label_id=-100, sequence_a_segment_id=0, mask_padding_with_zero=True):
-    
+def convert_examples_to_features(
+    examples,
+    label_list,
+    max_seq_length,
+    tokenizer,
+    cls_token="[CLS]",
+    cls_token_segment_id=1,
+    sep_token="[SEP]",
+    pad_token=0,
+    pad_token_segment_id=0,
+    pad_token_label_id=-100,
+    sequence_a_segment_id=0,
+    mask_padding_with_zero=True,
+):
+
     label_map = {label: i for i, label in enumerate(label_list)}
 
     features = []
@@ -83,11 +98,15 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
         for word, label in zip(example.words, example.labels):
             word_tokens = tokenizer.tokenize(word)
 
-            # bert-base-multilingual-cased sometimes output "nothing ([]) when calling tokenize with just a space.
+            # bert-base-multilingual-cased sometimes output "nothing ([])
+            # when calling tokenize with just a space.
             if len(word_tokens) > 0:
                 tokens.extend(word_tokens)
-                # Use the real label id for the first token of the word, and padding ids for the remaining tokens
-                label_ids.extend([label_map[label]] + [pad_token_label_id] * (len(word_tokens) - 1))
+                # Use the real label id for the first token of the word,
+                # and padding ids for the remaining tokens
+                label_ids.extend(
+                    [label_map[label]] + [pad_token_label_id] * (len(word_tokens) - 1)
+                )
 
         special_tokens_count = 2
         if len(tokens) > max_seq_length - special_tokens_count:
@@ -128,15 +147,28 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
 
         features.append(
             InputFeatures(
-                input_ids=input_ids, attention_mask=input_mask, token_type_ids=segment_ids, label_ids=label_ids
+                input_ids=input_ids,
+                attention_mask=input_mask,
+                token_type_ids=segment_ids,
+                label_ids=label_ids,
             )
         )
     return features
-    
 
-def read_eval_features(data_dir, file_name, max_seq_length, tokenizer, cls_token="[CLS]",
-                   cls_token_segment_id=1, sep_token="[SEP]", pad_token=0, pad_token_segment_id=0, 
-                   sequence_a_segment_id=0, mask_padding_with_zero=True):
+
+def read_eval_features(
+    data_dir,
+    file_name,
+    max_seq_length,
+    tokenizer,
+    cls_token="[CLS]",
+    cls_token_segment_id=1,
+    sep_token="[SEP]",
+    pad_token=0,
+    pad_token_segment_id=0,
+    sequence_a_segment_id=0,
+    mask_padding_with_zero=True,
+):
     file_path = os.path.join(data_dir, f"{file_name}.txt")
     guid_index = 1
     examples = []
@@ -146,15 +178,17 @@ def read_eval_features(data_dir, file_name, max_seq_length, tokenizer, cls_token
         for line in f:
             if line.startswith("-DOCSTART-") or line == "" or line == "\n":
                 if words:
-                    examples.append(InputExample(guid=f"eval-{guid_index}", words=words))
+                    examples.append(
+                        InputExample(guid=f"eval-{guid_index}", words=words)
+                    )
                     guid_index += 1
                     words = []
                 else:
                     splits = line.split(" ")
                     words.append(splits[0])
         if words:
-            examples.append(InputExample(guid=f"{mode}-{guid_index}", words=words))
-    
+            examples.append(InputExample(guid=f"eval-{guid_index}", words=words))
+
     features = []
     for (ex_index, example) in enumerate(examples):
         if ex_index % 10_000 == 0:
@@ -164,10 +198,11 @@ def read_eval_features(data_dir, file_name, max_seq_length, tokenizer, cls_token
         for word in example.words:
             word_tokens = tokenizer.tokenize(word)
 
-            # bert-base-multilingual-cased sometimes output "nothing ([]) when calling tokenize with just a space.
+            # bert-base-multilingual-cased sometimes output "nothing ([])
+            # when calling tokenize with just a space.
             if len(word_tokens) > 0:
                 tokens.extend(word_tokens)
-        
+
         special_tokens_count = 2
         if len(tokens) > max_seq_length - special_tokens_count:
             tokens = tokens[: (max_seq_length - special_tokens_count)]
@@ -200,12 +235,13 @@ def read_eval_features(data_dir, file_name, max_seq_length, tokenizer, cls_token
 
         features.append(
             InputFeatures(
-                input_ids=input_ids, attention_mask=input_mask, token_type_ids=segment_ids
+                input_ids=input_ids,
+                attention_mask=input_mask,
+                token_type_ids=segment_ids,
             )
         )
 
     return features
-
 
 
 def get_labels(path):

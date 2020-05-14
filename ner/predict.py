@@ -2,17 +2,9 @@ import glob
 import os
 from types import SimpleNamespace
 
-from transformers import (
-    AdamW,
-    AutoConfig,
-    AutoModelForTokenClassification,
-    AutoTokenizer,
-    get_linear_schedule_with_warmup,
-    PreTrainedTokenizer,
-)
-from torch.utils.data import DataLoader, TensorDataset
-from torch.nn import CrossEntropyLoss
 import torch as T
+from torch.nn import CrossEntropyLoss
+from transformers import AutoTokenizer
 
 from .model import NERTransformer
 from .utils import read_eval_features
@@ -21,13 +13,13 @@ from .utils import read_eval_features
 def predict():
     args = SimpleNamespace()
 
-    args.data_dir = './data'
-    args.labels = './data/labels.txt'
-    args.model_name_or_path = 'bert-base-multilingual-cased'
-    args.config_name = 'bert-base-multilingual-cased'
-    args.tokenizer_name = 'bert-base-multilingual-cased'
-    args.output_dir = './model'
-    args.cache_dir = './cache'
+    args.data_dir = "./data"
+    args.labels = "./data/labels.txt"
+    args.model_name_or_path = "bert-base-multilingual-cased"
+    args.config_name = "bert-base-multilingual-cased"
+    args.tokenizer_name = "bert-base-multilingual-cased"
+    args.output_dir = "./model"
+    args.cache_dir = "./cache"
 
     args.max_seq_length = 64
     args.num_train_epochs = 3
@@ -44,19 +36,24 @@ def predict():
 
     model = NERTransformer(args)
 
-    checkpoints = list(sorted(glob.glob(os.path.join(args.output_dir, "checkpointepoch=*.ckpt"), recursive=True)))
+    checkpoints = list(
+        sorted(
+            glob.glob(
+                os.path.join(args.output_dir, "checkpointepoch=*.ckpt"), recursive=True
+            )
+        )
+    )
     model = model.load_from_checkpoint(checkpoints[-1])
 
     tokenizer = AutoTokenizer.from_pretrained(
-        args.tokenizer_name,
-        cache_dir=args.cache_dir,
+        args.tokenizer_name, cache_dir=args.cache_dir,
     )
 
     pad_token_label_id = CrossEntropyLoss().ignore_index
 
     features = read_eval_features(
-        data_dir='data',
-        file_name='dev',
+        data_dir="data",
+        file_name="dev",
         max_seq_length=64,
         tokenizer=tokenizer,
         cls_token=tokenizer.cls_token,
@@ -64,7 +61,7 @@ def predict():
         sep_token=tokenizer.sep_token,
         pad_token=tokenizer.pad_token_id,
         pad_token_segment_id=tokenizer.pad_token_type_id,
-        pad_token_label_id=pad_token_label_id
+        pad_token_label_id=pad_token_label_id,
     )
 
     features = features[0:16]
@@ -74,8 +71,10 @@ def predict():
     all_token_type_ids = T.tensor([f.token_type_ids for f in features], dtype=T.long)
 
     with T.no_grad():
-        output = model.forward(input_ids=all_input_ids,
-                               attention_mask=all_attention_mask,
-                               token_type_ids=all_token_type_ids)
-    
+        output = model.forward(
+            input_ids=all_input_ids,
+            attention_mask=all_attention_mask,
+            token_type_ids=all_token_type_ids,
+        )
+
         print(*output)

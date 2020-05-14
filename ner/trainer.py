@@ -1,5 +1,6 @@
 import logging
 import os
+
 import pytorch_lightning as pl
 
 logger = logging.getLogger(__name__)
@@ -7,10 +8,18 @@ logger = logging.getLogger(__name__)
 
 def create_trainer(model, args):
     if os.path.exists(args.output_dir) and os.listdir(args.output_dir):
-        raise ValueError("Output directory ({}) already exists and is not empty.".format(args.output_dir))
+        raise ValueError(
+            "Output directory ({}) already exists and is not empty.".format(
+                args.output_dir
+            )
+        )
 
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        filepath=args.output_dir, prefix="checkpoint", monitor="val_loss", mode="min", save_top_k=5
+        filepath=args.output_dir,
+        prefix="checkpoint",
+        monitor="val_loss",
+        mode="min",
+        save_top_k=5,
     )
 
     train_params = dict(
@@ -48,7 +57,9 @@ class LoggingCallback(pl.Callback):
             metrics = trainer.callback_metrics
 
             # Log and save results to file
-            output_test_results_file = os.path.join(pl_module.hparams.output_dir, "test_results.txt")
+            output_test_results_file = os.path.join(
+                pl_module.hparams.output_dir, "test_results.txt"
+            )
             with open(output_test_results_file, "w") as writer:
                 for key in sorted(metrics):
                     if key not in ["log", "progress_bar"]:

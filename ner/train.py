@@ -9,13 +9,13 @@ from .trainer import create_trainer
 def train():
     args = SimpleNamespace()
 
-    args.data_dir = './data'
-    args.labels = './data/labels.txt'
-    args.model_name_or_path = 'bert-base-multilingual-cased'
-    args.config_name = 'bert-base-multilingual-cased'
-    args.tokenizer_name = 'bert-base-multilingual-cased'
-    args.output_dir = './model'
-    args.cache_dir = './cache'
+    args.data_dir = "./data"
+    args.labels = "./data/labels.txt"
+    args.model_name_or_path = "bert-base-multilingual-cased"
+    args.config_name = "bert-base-multilingual-cased"
+    args.tokenizer_name = "bert-base-multilingual-cased"
+    args.output_dir = "./model"
+    args.cache_dir = "./cache"
 
     args.max_seq_length = 64
     args.num_train_epochs = 3
@@ -35,6 +35,12 @@ def train():
 
     trainer.fit(model)
 
-    checkpoints = list(sorted(glob.glob(os.path.join(args.output_dir, "checkpointepoch=*.ckpt"), recursive=True)))
+    checkpoints = list(
+        sorted(
+            glob.glob(
+                os.path.join(args.output_dir, "checkpointepoch=*.ckpt"), recursive=True
+            )
+        )
+    )
     model = model.load_from_checkpoint(checkpoints[-1])
     trainer.test(model)
