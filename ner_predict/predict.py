@@ -3,11 +3,12 @@ import os
 from types import SimpleNamespace
 
 import torch as T
+from scipy.special import softmax
 from torch.nn import CrossEntropyLoss
 from transformers import AutoTokenizer
 
-from .model import NERTransformer
-from .utils import read_eval_features
+from .model import NERTransformer1
+from .utils import read_eval_features, read_examples_from_file
 
 
 def predict():
@@ -22,11 +23,6 @@ def predict():
     args.cache_dir = "./cache"
 
     args.max_seq_length = 64
-    args.num_train_epochs = 3
-    args.train_batch_size = 16
-    args.eval_batch_size = 16
-    args.n_gpu = 1
-    args.gradient_accumulation_steps = 1
     args.max_grad_norm = 1
     args.weight_decay = 0.0
     args.learning_rate = 5e-5
@@ -34,7 +30,7 @@ def predict():
     args.warmup_steps = 0
     args.save_steps = 750
 
-    model = NERTransformer(args)
+    model = NERTransformer1(args)
 
     checkpoints = list(
         sorted(
@@ -49,8 +45,6 @@ def predict():
         args.tokenizer_name, cache_dir=args.cache_dir,
     )
 
-    pad_token_label_id = CrossEntropyLoss().ignore_index
-
     features = read_eval_features(
         data_dir="data",
         file_name="dev",
@@ -61,10 +55,7 @@ def predict():
         sep_token=tokenizer.sep_token,
         pad_token=tokenizer.pad_token_id,
         pad_token_segment_id=tokenizer.pad_token_type_id,
-        pad_token_label_id=pad_token_label_id,
     )
-
-    features = features[0:16]
 
     all_input_ids = T.tensor([f.input_ids for f in features], dtype=T.long)
     all_attention_mask = T.tensor([f.attention_mask for f in features], dtype=T.long)
@@ -77,4 +68,42 @@ def predict():
             token_type_ids=all_token_type_ids,
         )
 
-        print(*output)
+    preds = output[0].numpy()
+
+    with open("out.txt", mode="w") as f:
+        for input_ids, pred in zip(all_input_ids, preds):
+            words = tokenizer.convert_ids_to_tokens(input_ids)[1:]
+            probs = pred[1:]
+
+            sentence = ""
+            prev_word = ""
+
+            prev_is_term = 0
+            is_term = ""
+
+            for word, prob in zip(words, probs):
+                prob = softmax(prob)
+
+                if word == "[SEP]" or word == "[PAD]":
+                    if prev_word:
+                        is_term += str(prev_is_term) + " "
+                        sentence += prev_word
+                    break
+
+                a = word.split("#")
+                if len(a) > 1:
+                    prev_is_term += prob[1]
+                    prev_is_term /= 2
+                    prev_word += a[-1]
+                else:
+                    if prev_word:
+                        is_term += str(prev_is_term) + " "
+                        prev_is_term = 0
+                        sentence += prev_word + " "
+                        prev_word = ""
+
+                    prev_word += a[0]
+                    prev_is_term += prob[1]
+
+            f.write(sentence + "\n")
+            f.write(is_term + "\n")
